@@ -1,0 +1,124 @@
+{#
+  Шаблон Moodle XML для вопросов типа CodeRunner (Python 3).
+
+  Переменные (см. README, раздел «Данные шаблона»):
+    generated_at — метка времени;
+    topics       — темы: number, title (или None), questions;
+    question     — id, title, condition, input_description, output_description,
+                   solution, test_cases (number, input, output).
+
+  Экранирование: окружение Jinja2 создано с autoescape=True, поэтому каждое
+  значение {{ ... }} экранируется по правилам XML (& < > " ').
+  HTML-текст вопроса размещён внутри CDATA: разметку (<p>, <div>) задаёт шаблон,
+  а экранированный текст задания браузер покажет как обычный текст.
+
+  Каждая тема выгружается как категория вопросов Moodle (question type="category").
+  Студенту в качестве примеров показываются первые SHOWN_EXAMPLES тест-кейсов,
+  остальные скрыты; при проверке ответа используются все.
+#}
+{% set SHOWN_EXAMPLES = 3 %}
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Сформировано tc_tools.converter, метка времени {{ generated_at }} -->
+<quiz>
+{% for topic in topics %}
+  {% set category = "Тема " ~ topic.number ~ ((". " ~ topic.title) if topic.title else "") %}
+
+  <!-- ===== {{ category }} ===== -->
+  <question type="category">
+    <category>
+      <text>$course$/top/{{ category | replace("/", "//") }}</text>
+    </category>
+    <info format="html">
+      <text></text>
+    </info>
+  </question>
+  {% for question in topic.questions %}
+
+  <question type="coderunner">
+    <name>
+      <text>{{ question.id }}. {{ question.title }}</text>
+    </name>
+    <questiontext format="html">
+      <text><![CDATA[<div style="white-space: pre-wrap;">{{ question.condition }}</div>
+<p><strong>Входные данные</strong></p>
+<div style="white-space: pre-wrap;">{{ question.input_description }}</div>
+<p><strong>Выходные данные</strong></p>
+<div style="white-space: pre-wrap;">{{ question.output_description }}</div>]]></text>
+    </questiontext>
+    <generalfeedback format="html">
+      <text></text>
+    </generalfeedback>
+    <defaultgrade>1</defaultgrade>
+    <penalty>0</penalty>
+    <hidden>0</hidden>
+    <idnumber>{{ question.id }}</idnumber>
+    <coderunnertype>python3</coderunnertype>
+    <prototypetype>0</prototypetype>
+    <allornothing>1</allornothing>
+    <penaltyregime>10, 20, ...</penaltyregime>
+    <precheck>0</precheck>
+    <hidecheck>0</hidecheck>
+    <showsource>0</showsource>
+    <answerboxlines>18</answerboxlines>
+    <answerboxcolumns>100</answerboxcolumns>
+    <answerpreload></answerpreload>
+    <globalextra></globalextra>
+    <useace></useace>
+    <resultcolumns></resultcolumns>
+    <template></template>
+    <iscombinatortemplate></iscombinatortemplate>
+    <allowmultiplestdins></allowmultiplestdins>
+    <answer>{{ question.solution }}</answer>
+    <validateonsave>1</validateonsave>
+    <testsplitterre></testsplitterre>
+    <language></language>
+    <acelang></acelang>
+    <sandbox></sandbox>
+    <grader></grader>
+    <cputimelimitsecs></cputimelimitsecs>
+    <memlimitmb></memlimitmb>
+    <sandboxparams></sandboxparams>
+    <templateparams></templateparams>
+    <hoisttemplateparams>1</hoisttemplateparams>
+    <extractcodefromjson>1</extractcodefromjson>
+    <templateparamslang>None</templateparamslang>
+    <templateparamsevalpertry>0</templateparamsevalpertry>
+    <templateparamsevald>{}</templateparamsevald>
+    <twigall>0</twigall>
+    <uiplugin></uiplugin>
+    <uiparameters></uiparameters>
+    <attachments>0</attachments>
+    <attachmentsrequired>0</attachmentsrequired>
+    <maxfilesize>10240</maxfilesize>
+    <filenamesregex></filenamesregex>
+    <filenamesexplain></filenamesexplain>
+    <displayfeedback>1</displayfeedback>
+    <giveupallowed>0</giveupallowed>
+    <prototypeextra></prototypeextra>
+    <testcases>
+    {% for test_case in question.test_cases %}
+      {% set shown = loop.index <= SHOWN_EXAMPLES %}
+      <testcase testtype="0" useasexample="{{ 1 if shown else 0 }}" hiderestiffail="0" mark="1.0000000">
+        <testcode>
+          <text></text>
+        </testcode>
+        <stdin>
+          <text>{{ test_case.input }}</text>
+        </stdin>
+        <expected>
+          <text>{{ test_case.output }}</text>
+        </expected>
+        <extra>
+          <text></text>
+        </extra>
+        <display>
+          <text>{{ "SHOW" if shown else "HIDE" }}</text>
+        </display>
+      </testcase>
+    {% endfor %}
+    </testcases>
+  </question>
+  {% endfor %}
+{% endfor %}
+
+</quiz>

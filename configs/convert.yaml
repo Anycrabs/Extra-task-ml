@@ -1,0 +1,31 @@
+# Конфигурация модуля форматирования заданий.
+# Запуск: python -m tc_tools.converter -c configs/convert.yaml
+# Любой параметр можно переопределить аргументом командной строки (см. --help).
+# Относительные пути считаются от папки, из которой запускается модуль.
+
+# Входные файлы решений: файлы и/или папки (из папок берутся *.txt)
+inputs:
+  - examples/solutions
+recursive: false
+
+# Переводы строк: во входных файлах (решения, справочник, отчёты) auto|crlf|lf|cr,
+# в создаваемых (XML, лог) crlf|lf|cr
+input_eol: auto
+output_eol: crlf
+
+# Краткие отчёты модуля проверки: файлы Отчет_<Метка>_all.log и/или папки с ними.
+# Если отчётов несколько, для каждого задания берётся результат самой поздней проверки.
+reports:
+  - out/reports
+ignore_reports: false       # true — выгрузить все задания без учёта проверки
+
+topics: examples/topics.csv # справочник тем (null — только номера тем)
+template: tc_tools/templates/moodle_coderunner.xml.j2
+
+split_by_topic: false       # true — отдельный XML-файл на каждую тему
+# Шаблон имени файла. Подстановки: {timestamp}; при split_by_topic также {topic}, {topic_title}.
+# null — по умолчанию Questions_all_{timestamp}.xml / Questions_{topic}_{timestamp}.xml
+output_name: null
+
+output_dir: out/xml         # папка для XML-файлов
+log_dir: out/logs           # папка для логов

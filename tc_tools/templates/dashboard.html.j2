@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Результаты проверки {{ timestamp }}</title>
+<style>
+  :root {
+    --bg: #f5f4ef; --surface: #ffffff; --text: #1e2226; --muted: #697078; --line: #e2e0d8;
+    --track: #ebe9e2; --accent: #2f66d0;
+    --ok: #2b9460; --warn: #cf8f22; --err: #cc4458; --time: #7458c4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161a; --surface: #1c1f24; --text: #e7e5df; --muted: #9aa1a8; --line: #2c3036;
+      --track: #2a2e34; --accent: #73a0f5;
+      --ok: #4cc08a; --warn: #e6ae4a; --err: #ee6b7d; --time: #a28bf0;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 28px 16px 56px; }
+  header { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px;
+           flex-wrap: wrap; margin-bottom: 20px; }
+  h1 { font-size: 24px; margin: 0; letter-spacing: -0.01em; }
+  h2 { font-size: 15px; margin: 0 0 14px; }
+  .muted { color: var(--muted); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 12px; }
+  .kpi-label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+  .kpi-value { font-size: 27px; font-weight: 650; margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
+  .kpi-value.hi { color: var(--ok); } .kpi-value.mid { color: var(--warn); } .kpi-value.lo { color: var(--err); }
+  .kpi-note { color: var(--muted); font-size: 12px; min-height: 18px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; margin-bottom: 12px; }
+
+  /* Кольцевая диаграмма исходов ТК */
+  .donut-row { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+  .donut { position: relative; width: 156px; height: 156px; border-radius: 50%; flex: none;
+           background: conic-gradient({{ donut.gradient }}); }
+  .donut::after { content: ""; position: absolute; inset: 24px; border-radius: 50%; background: var(--surface); }
+  .donut-center { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column;
+                  align-items: center; justify-content: center; }
+  .donut-center b { font-size: 24px; font-variant-numeric: tabular-nums; }
+  .legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .legend li { display: grid; grid-template-columns: 12px 1fr auto; gap: 10px; align-items: center; }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; }
+  .num { font-variant-numeric: tabular-nums; text-align: right; }
+
+  /* Гистограмма распределения файлов по % верных */
+  .hist { display: flex; align-items: flex-end; gap: 10px; height: 170px; padding-top: 18px; }
+  .hist-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+  .hist-bar { width: 100%; max-width: 54px; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 2px; }
+  .hist-count { font-size: 12px; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+  .hist-label { font-size: 12px; color: var(--muted); margin-top: 6px; white-space: nowrap; }
+
+  /* Горизонтальные полосы */
+  .bar-row { display: grid; grid-template-columns: 120px 1fr 120px; gap: 12px; align-items: center; margin: 8px 0; }
+  .track { height: 10px; background: var(--track); border-radius: 5px; overflow: hidden; }
+  .fill { height: 100%; border-radius: 5px; }
+  .fill.hi { background: var(--ok); } .fill.mid { background: var(--warn); } .fill.lo { background: var(--err); }
+
+  /* Таблица студентов */
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .toolbar input, .toolbar select { font: inherit; color: var(--text); background: var(--bg);
+           border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
+  .toolbar input { flex: 1; min-width: 200px; }
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+       cursor: pointer; user-select: none; white-space: nowrap; }
+  th[data-dir="asc"]::after { content: " ▲"; } th[data-dir="desc"]::after { content: " ▼"; }
+  tbody tr:hover { background: var(--bg); }
+  .pct { display: flex; align-items: center; gap: 8px; min-width: 150px; }
+  .pct .track { flex: 1; }
+  .pct span { width: 54px; text-align: right; font-variant-numeric: tabular-nums; }
+  .mosaic { display: flex; flex-wrap: wrap; gap: 3px; max-width: 260px; }
+  .sq { width: 13px; height: 13px; border-radius: 3px; background: var(--err); }
+  .sq.ok { background: var(--ok); }
+  .file { color: var(--muted); font-size: 12px; }
+  .notes { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; font-size: 13px; }
+  footer { margin-top: 18px; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Результаты проверки тест-кейсов</h1>
+      <div class="muted">Запуск {{ timestamp }}</div>
+    </div>
+    <div class="muted">Зелёный — верно, красный — неверно</div>
+  </header>
+
+  <section class="kpis">
+  {% for kpi in kpis %}
+    <div class="card">
+      <div class="kpi-label">{{ kpi.label }}</div>
+      <div class="kpi-value {{ kpi.level or '' }}">{{ kpi.value }}</div>
+      <div class="kpi-note">{{ kpi.note }}</div>
+    </div>
+  {% endfor %}
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>Исходы тест-кейсов</h2>
+      <div class="donut-row">
+        <div class="donut" role="img" aria-label="Исходы тест-кейсов">
+          <div class="donut-center"><b>{{ donut.total }}</b><span class="muted">ТК всего</span></div>
+        </div>
+        <ul class="legend">
+        {% for segment in donut.segments %}
+          <li>
+            <span class="swatch" style="background: var(--{{ segment.color }})"></span>
+            <span>{{ segment.label }}</span>
+            <span class="num">{{ segment.count }} <span class="muted">· {{ segment.share }}%</span></span>
+          </li>
+        {% endfor %}
+        </ul>
+      </div>
+      <div class="notes muted">
+        <span>Заданий с ошибкой оформления: <b>{{ issues.format_errors }}</b></span>
+        <span>Заданий без тест-кейсов: <b>{{ issues.no_tests }}</b></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Распределение файлов решений по % верных заданий</h2>
+      <div class="hist">
+      {% for bin in histogram %}
+        <div class="hist-col" title="{{ bin.label }}%: {{ bin.count }}">
+          <div class="hist-count">{{ bin.count }}</div>
+          <div class="hist-bar" style="height: {{ bin.height }}%"></div>
+          <div class="hist-label">{{ bin.label }}%</div>
+        </div>
+      {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>По группам</h2>
+      {% for group in groups %}
+      <div class="bar-row">
+        <span>{{ group.label }}</span>
+        <div class="track"><div class="fill {{ group.level }}" style="width: {{ group.percent }}%"></div></div>
+        <span class="num">{{ "%.2f"|format(group.percent) }}% <span class="muted">({{ group.passed }}/{{ group.tasks }})</span></span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="card">
+      <h2>По файлам с заданиями (темам)</h2>
+      {% for topic in topics %}
+      <div class="bar-row">
+        <span>{{ topic.label }}</span>
+        <div class="track"><div class="fill {{ topic.level }}" style="width: {{ topic.percent }}%"></div></div>
+        <span class="num">{{ "%.2f"|format(topic.percent) }}% <span class="muted">({{ topic.passed }}/{{ topic.tasks }})</span></span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Студенты и файлы решений</h2>
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="Поиск по студенту, группе или имени файла">
+      <select id="group">
+        <option value="">Все группы</option>
+        {% for name in group_names %}<option>{{ name }}</option>{% endfor %}
+      </select>
+      <span class="muted">Показано: <b id="shown">{{ rows|length }}</b> из {{ rows|length }}</span>
+    </div>
+    <div class="table-scroll">
+      <table id="students">
+        <thead>
+          <tr>
+            <th data-type="text">Группа</th>
+            <th data-type="text">Студент</th>
+            <th data-type="num" class="num">Файл</th>
+            <th data-type="num" class="num">Заданий</th>
+            <th data-type="num" class="num">Верно</th>
+            <th data-type="num" class="num">Неверно</th>
+            <th data-type="num">% верных</th>
+            <th data-type="none">Задания</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for row in rows %}
+          <tr data-group="{{ row.group }}" data-search="{{ (row.group ~ ' ' ~ row.student ~ ' ' ~ row.name)|lower }}">
+            <td>{{ row.group or "—" }}</td>
+            <td>{{ row.student or "—" }}<div class="file">{{ row.name }}</div></td>
+            <td class="num">{{ row.file_no }}</td>
+            <td class="num">{{ row.total }}</td>
+            <td class="num">{{ row.passed }}</td>
+            <td class="num">{{ row.failed }}</td>
+            <td data-sort="{{ row.percent }}">
+              <div class="pct">
+                <div class="track"><div class="fill {{ row.level }}" style="width: {{ row.percent }}%"></div></div>
+                <span>{{ "%.2f"|format(row.percent) }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="mosaic">
+              {% for task in row.tasks %}<span class="sq{{ ' ok' if task.ok }}" title="{{ task.hint }}"></span>{% endfor %}
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <footer class="muted">Сформировано модулем проверки тест-кейсов tc_tools · наведите курсор на квадрат задания, чтобы увидеть подробности</footer>
+</div>
+<script>
+(function () {
+  var table = document.getElementById("students");
+  var body = table.tBodies[0];
+  var search = document.getElementById("search");
+  var group = document.getElementById("group");
+  var shown = document.getElementById("shown");
+
+  function applyFilter() {
+    var query = search.value.trim().toLowerCase();
+    var count = 0;
+    Array.prototype.forEach.call(body.rows, function (row) {
+      var visible = (!query || row.dataset.search.indexOf(query) !== -1) &&
+                    (!group.value || row.dataset.group === group.value);
+      row.hidden = !visible;
+      if (visible) { count += 1; }
+    });
+    shown.textContent = count;
+  }
+
+  function cellValue(row, index, numeric) {
+    var cell = row.cells[index];
+    var raw = cell.dataset.sort !== undefined ? cell.dataset.sort : cell.textContent.trim();
+    return numeric ? parseFloat(raw) || 0 : raw;
+  }
+
+  table.querySelectorAll("th").forEach(function (th) {
+    if (th.dataset.type === "none") { th.style.cursor = "default"; return; }
+    th.addEventListener("click", function () {
+      var direction = th.dataset.dir === "asc" ? "desc" : "asc";
+      table.querySelectorAll("th").forEach(function (other) { delete other.dataset.dir; });
+      th.dataset.dir = direction;
+      var numeric = th.dataset.type === "num";
+      var sign = direction === "asc" ? 1 : -1;
+      var rows = Array.prototype.slice.call(body.rows);
+      rows.sort(function (a, b) {
+        var x = cellValue(a, th.cellIndex, numeric), y = cellValue(b, th.cellIndex, numeric);
+        return sign * (numeric ? x - y : String(x).localeCompare(String(y), "ru"));
+      });
+      rows.forEach(function (row) { body.appendChild(row); });
+    });
+  });
+
+  search.addEventListener("input", applyFilter);
+  group.addEventListener("change", applyFilter);
+})();
+</script>
+</body>
+</html>

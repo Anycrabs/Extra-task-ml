@@ -1,0 +1,47 @@
+# Виртуальное окружение проекта
+tc_env/
+
+# Другие типовые имена виртуальных окружений
+.venv/
+venv/
+env/
+ENV/
+
+# Кэш Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# pytest и покрытие тестами
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Результаты запусков модулей (отчёты, логи, XML, дашборды)
+out/
+reports/
+logs/
+xml/
+Отчет_*
+Check_log_*.log
+Conversion_log_*.log
+Questions_*.xml
+
+# Сборка и упаковка
+build/
+dist/
+*.egg-info/
+*.zip
+
+# Настройки IDE и редакторов
+.idea/
+.vscode/
+*.swp
+
+# Системные файлы
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Локальные конфигурации (общие лежат в configs/)
+configs/*.local.yaml
